@@ -9,6 +9,7 @@ from pathlib import Path
 from rich.console import Console
 from rich.prompt import Prompt
 from plyer import notification
+from asyncio import subprocess
 import datetime
 import aiofiles
 import aiohttp
@@ -41,13 +42,16 @@ if not config_file.exists():
 
 config.read(config_file)
 
-BASE_URL = config.get("DEFAULT", "BASE_URL", fallback="https://api.e-z.host/files")
-GRIMBLAST_PATH = config.get("DEFAULT", "GRIMBLAST_PATH", fallback="/usr/bin/grimblast")
+BASE_URL = config.get("DEFAULT", "BASE_URL",
+                      fallback="https://api.e-z.host/files")
+GRIMBLAST_PATH = config.get(
+    "DEFAULT", "GRIMBLAST_PATH", fallback="/usr/bin/grimblast")
 API_KEY = config.get("DEFAULT", "API_KEY", fallback="")
 COMPRESSION_LEVEL = config.getint("DEFAULT", "COMPRESSION_LEVEL", fallback=0)
 SAVE_TO_DISK = config.getboolean("DEFAULT", "SAVE_TO_DISK", fallback=True)
 SAVE_DIRECTORY = Path(
-    config.get("DEFAULT", "SAVE_DIRECTORY", fallback=str(Path.home() / "Screenshots"))
+    config.get("DEFAULT", "SAVE_DIRECTORY",
+               fallback=str(Path.home() / "Screenshots"))
 )
 DEFAULT_SERVICE = config.get("DEFAULT", "DEFAULT_SERVICE", fallback="ezhost")
 IMAGE_FORMAT = config.get("DEFAULT", "IMAGE_FORMAT", fallback="png")
@@ -112,7 +116,7 @@ async def capture_screenshot(output_file: Path, mode: str):
     output_file.parent.mkdir(parents=True, exist_ok=True)
 
     process = await asyncio.create_subprocess_exec(
-        *command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+        *command, stdout=subprocess.PIPE, stderr=subprocess.PIPE
     )
     stdout, stderr = await process.communicate()
 
@@ -123,7 +127,8 @@ async def capture_screenshot(output_file: Path, mode: str):
             progress.update(task, advance=1)
 
     if VERBOSE:
-        console.print("[bold green]Screenshot captured successfully[/bold green]")
+        console.print(
+            "[bold green]Screenshot captured successfully[/bold green]")
         logger.info("Screenshot captured successfully")
     if process.returncode != 0:
         console.print(
@@ -166,17 +171,24 @@ async def upload_screenshot(api_key: str, file_path: Path, verbose: bool):
                         data = await response.json()
                         if verbose:
                             console.print(
-                                "[bold green]File uploaded successfully![/bold green]"
+                                "[bold green]\
+                                    Uploaded successfully!\
+                                [/bold green]"
                             )
                             logger.info("File uploaded successfully")
                             console.print(f"File URL: [bold cyan]{
-                                          data.get('imageUrl', 'N/A')}[/bold cyan]")
-                            logger.info(f"File URL: {data.get('imageUrl', 'N/A')}")
+                                          data.get('imageUrl', 'N/A')
+                                          }[/bold cyan]")
+                            logger.info(
+                                f"File URL: {data.get('imageUrl', 'N/A')}")
                             console.print(f"Raw URL: [bold cyan]{
-                                          data.get('rawUrl', 'N/A')}[/bold cyan]")
-                            logger.info(f"Raw URL: {data.get('rawUrl', 'N/A')}")
+                                          data.get('rawUrl', 'N/A')
+                                          }[/bold cyan]")
+                            logger.info(
+                                f"Raw URL: {data.get('rawUrl', 'N/A')}")
                             console.print(f"Delete URL: [bold red]{
-                                          data.get('deletionUrl', 'N/A')}[/bold red]")
+                                          data.get('deletionUrl', 'N/A')
+                                          }[/bold red]")
                             logger.info(f"Delete URL: {
                                         data.get('deletionUrl', 'N/A')}")
                         file_url = (
@@ -186,7 +198,9 @@ async def upload_screenshot(api_key: str, file_path: Path, verbose: bool):
                         )
                         pyperclip.copy(file_url)
                         console.print(
-                            "[bold green]File URL copied to clipboard![/bold green]"
+                            "[bold green]\
+                                File URL copied to clipboard!\
+                            [/bold green]"
                         )
                         logger.info("File URL copied to clipboard")
                         filename = file_url.split("/")[-1]
@@ -197,7 +211,8 @@ async def upload_screenshot(api_key: str, file_path: Path, verbose: bool):
                             hf.write(f"{file_url}\n")
                     else:
                         console.print(
-                            f"[bold red]Error {response.status}:[/bold red] {await response.text()}",
+                            f"[bold red]Error {response.status}:[/bold red] {
+                                await response.text()}",
                             style="red",
                         )
                         logger.error(
@@ -228,7 +243,8 @@ def compress_image(file_path: Path, quality: int = COMPRESSION_LEVEL):
 def get_api_key():
     global API_KEY
     if not API_KEY:
-        API_KEY = Prompt.ask("[bold cyan]Please enter your API key[/bold cyan]")
+        API_KEY = Prompt.ask(
+            "[bold cyan]Please enter your API key[/bold cyan]")
         config["DEFAULT"]["API_KEY"] = API_KEY
         with config_file.open("w") as f:
             config.write(f)
@@ -247,13 +263,14 @@ def partial(
         DEFAULT_SERVICE,
         "--service",
         "-s",
-        help="Choose the upload service to use (e.g., ezhost, anonhost, ferrethost).",
+        help="Choose the upload service to use (e.g., ezhost, ferrethost).",
     ),
 ):
     api_key = get_api_key()
     if file_name is None:
         file_name = generate_filename()
-    output_file = SAVE_DIRECTORY / file_name if SAVE_TO_DISK else Path(file_name)
+    output_file = SAVE_DIRECTORY / \
+        file_name if SAVE_TO_DISK else Path(file_name)
     asyncio.run(capture_screenshot(output_file, "partial"))
     if service == "ezhost":
         asyncio.run(upload_screenshot(api_key, output_file, verbose))
@@ -274,7 +291,8 @@ def fullscreen(
     api_key = get_api_key()
     if file_name is None:
         file_name = generate_filename()
-    output_file = SAVE_DIRECTORY / file_name if SAVE_TO_DISK else Path(file_name)
+    output_file = SAVE_DIRECTORY / \
+        file_name if SAVE_TO_DISK else Path(file_name)
     asyncio.run(capture_screenshot(output_file, "fullscreen"))
     asyncio.run(upload_screenshot(api_key, output_file, verbose))
 
@@ -291,7 +309,8 @@ def window(
     api_key = get_api_key()
     if file_name is None:
         file_name = generate_filename()
-    output_file = SAVE_DIRECTORY / file_name if SAVE_TO_DISK else Path(file_name)
+    output_file = SAVE_DIRECTORY / \
+        file_name if SAVE_TO_DISK else Path(file_name)
     asyncio.run(capture_screenshot(output_file, "window"))
     asyncio.run(upload_screenshot(api_key, output_file, verbose))
 
@@ -327,7 +346,8 @@ def history():
                 console.print("[bold green]Upload History:[/bold green]")
                 console.print(history_content)
             else:
-                console.print("[bold yellow]No upload history found.[/bold yellow]")
+                console.print(
+                    "[bold yellow]No upload history found.[/bold yellow]")
     else:
         console.print("[bold yellow]No upload history found.[/bold yellow]")
 
@@ -343,4 +363,3 @@ def clear_history():
 
 if __name__ == "__main__":
     app()
-
